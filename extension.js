@@ -9,9 +9,9 @@ function maximize(act) {
 	if (win.window_type !== Meta.WindowType.NORMAL)
 		return;
 	// If the current workspace doesn't have any other windows make it maximized here.
-	if (global.screen.get_active_workspace().list_windows().filter(w => !w.is_on_all_workspaces()).length == 1)
+	if (win.get_workspace().list_windows().filter(w => !w.is_on_all_workspaces()).length == 1)
 		return;
-	_previousWorkspace[win] = global.screen.get_active_workspace_index();
+	_previousWorkspace[win] = win.get_workspace();
 	let lastworkspace = Math.max(1, global.screen.n_workspaces);
 	win.change_workspace_by_index(lastworkspace, true, global.get_current_time());
 	global.screen.get_workspace_by_index(lastworkspace).activate(global.get_current_time());
@@ -22,29 +22,32 @@ function unmaximize(act){
 	if (win.window_type !== Meta.WindowType.NORMAL)
 		return;
 	let previous = _previousWorkspace[win];
+	delete _previousWorkspace[win];
 	if (previous == undefined)
 		return;
-	let cws = global.screen.get_active_workspace();
-	win.change_workspace_by_index(previous, true, global.get_current_time());
-	global.screen.get_workspace_by_index(previous).activate(global.get_current_time());
+	let old_ws = win.get_workspace();
+	win.change_workspace(previous, true, global.get_current_time());
+	previous.activate(global.get_current_time());
 	// Don't leave empty created workspaces behind.
-	if (cws.list_windows().filter(w => !w.is_on_all_workspaces()).length == 0)
-		global.screen.remove_workspace(cws, global.get_current_time());
-}
-
-
-function handleResize(act) {
-	if (act.meta_window.is_fullscreen())
-		maximize(act);
-	else
-		unmaximize(act);
+	if (old_ws.list_windows().filter(w => !w.is_on_all_workspaces()).length == 0)
+		global.screen.remove_workspace(old_ws, global.get_current_time());
 }
 
 function bindNewWindows() {
 	global.get_window_actors().filter((a) => !(a in _handles)).forEach(function(actor) {
-		let resize  = actor.connect("size-changed", () => handleResize(actor));
-		let destroy = actor.connect("destroy", function() { actor.disconnect(resize); delete _handles[actor]; });
-		_handles[actor] = (resize, destroy);
+		let resize_event = actor.connect("size-changed", () => {
+			if (actor.meta_window.is_fullscreen())
+				maximize(actor);
+			else
+				unmaximize(actor);
+		});
+		let destroy_event = actor.connect("destroy", () => {
+			// TOFIX: this is not really working
+			actor.disconnect(resize_event);
+			unmaximize(actor);
+			delete _handles[actor];
+		});
+		_handles[actor] = [actor, resize_event, destroy_event];
 	});
 }
 
@@ -52,7 +55,7 @@ function bindNewWindows() {
 // Mandatory Functions //
 
 function init(extensionMeta) {
-
+	// Nothing to do here, but this function must exist
 }
 
 function enable() {
@@ -62,13 +65,12 @@ function enable() {
 }
 
 function disable() {
-	for (let act in _handles) {
-		if (object.hasOwnProperty(act)) {
-			let resize, destroy = _handles[act];
-			act.disconnect(resize);
-			act.disconnect(destroy);
+	for (let actor_s in _handles) {
+		if (_handles.hasOwnProperty(actor_s)) {
+			let [actor, resize_e, destroy_e] = _handles[actor_s];
+			actor.disconnect(resize_e);
+			actor.disconnect(destroy_e);
 		}
 	}
 	global.screen.disconnect(wse);
-	// TOFIX: Cinnamon crashes here
 }
