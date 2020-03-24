@@ -23,7 +23,6 @@ function unmaximize(win, clean_ws) {
 	if (previous == undefined)
 		return;
 	let old_ws = clean_ws || win.get_workspace();
-	global.log(old_ws);
 	if (!clean_ws)
 		win.change_workspace(previous, true, global.get_current_time());
 	previous.activate(global.get_current_time());
@@ -71,7 +70,6 @@ function enable() {
 		let actor = global.get_window_actors().filter((act) => act.meta_window == win)[0];
 		if (!(actor in _handles))
 			return;
-		global.log("detected! "+old_ws);
 		if (win.is_fullscreen())
 			unmaximize(win, true); // TOFIX: how to find the old workspace?
 		delete _handles[actor];
