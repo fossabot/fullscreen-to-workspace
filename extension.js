@@ -1,7 +1,10 @@
 const Meta = imports.gi.Meta;
 const Mainloop = imports.mainloop;
 
-let _handles, _previousWorkspace, _wsadd_event, _wsdel_event;
+// pythonic
+const range = (n) => Array(n+1).join().split("").map((_,i) => i);
+
+let _handles, _previousWorkspace;
 
 function maximize(win) {
 	if (win.window_type !== Meta.WindowType.NORMAL)
@@ -39,6 +42,17 @@ function handleResize(actor) {
 		unmaximize(win);
 }
 
+function handleClose(workspace, win) {
+	if (win.window_type !== Meta.WindowType.NORMAL)
+		return;
+	let actor = global.get_window_actors().filter((act) => act.meta_window == win)[0];
+	if (!(actor in _handles))
+		return;
+	if (win.is_fullscreen())
+		unmaximize(win, workspace);
+	delete _handles[actor];
+}
+
 
 // Mandatory Functions //
 
@@ -49,9 +63,9 @@ function init(extensionMeta) {
 
 function enable() {
 	// TODO: maybe use a better method to extract parent actor.
-	// the problem is that `window-added`/`window-removed` only give screen and a window
+	// the problem is that `window-added`/`window-removed` only give screen/ws and a window
 	// but `size-changed` requires the parent actor, how to get it in a meaningful way?
-	_wsadd_event = global.screen.connect("window-added", (_, win) => {
+	_handles[global.screen+"winadd"] = [global.screen, global.screen.connect("window-added", (_, win) => {
 		if (win.window_type !== Meta.WindowType.NORMAL)
 			return;
 		// for some reason we need to idle, otherwise the window is not captured
@@ -60,32 +74,39 @@ function enable() {
 			let actor = global.get_window_actors().filter((act) => act.meta_window == win)[0];
 			if (actor in _handles)
 				return;
+			// TODO: is there a better way to bind this event, instead of binding
+			// it on all possible windows? I think that this would scale very poorly
 			let resize_event = actor.connect("size-changed", handleResize);
 			_handles[actor] = [actor, resize_event];
 		});
-	});
-	_wsdel_event = global.screen.connect("window-removed", (_, win) => {
-		if (win.window_type !== Meta.WindowType.NORMAL)
-			return;
-		let actor = global.get_window_actors().filter((act) => act.meta_window == win)[0];
-		if (!(actor in _handles))
-			return;
-		if (win.is_fullscreen())
-			unmaximize(win, true); // TOFIX: how to find the old workspace?
-		delete _handles[actor];
-	});
+	})];
+	_handles[global.screen+"wsadd"] = [global.screen, global.screen.connect("workspace-added", (_, wsi) => {
+		// bind window-removed on the created ws
+		let ws = global.screen.get_workspace_by_index(wsi);
+		let remove_event = ws.connect("window-removed", handleClose);
+		_handles[ws] = [ws, remove_event];
+	})];
+	_handles[global.screen+"wsdel"] = [global.screen, global.screen.connect("workspace-removed", (_, wsi) => {
+		// what a cancer...
+		let k = Object.keys(_handles).filter((key) => _handles[key][0] instanceof Meta.Workspace).filter((key) => _handles[key][0].index == wsi)[0];
+		if (k != undefined)
+			delete _handles[k];
+	})];
 	// bind existing windows
 	global.get_window_actors().forEach((actor) => {
 		let resize_event = actor.connect("size-changed", handleResize);
 		_handles[actor] = [actor, resize_event];
 	});
+	// bind existing workspaces
+	range(global.screen.n_workspaces).map((i) => global.screen.get_workspace_by_index(i)).forEach((ws) => {
+		let remove_event = ws.connect("window-removed", handleClose);
+		_handles[ws] = [ws, remove_event];
+	});
 }
 
 function disable() {
-	Object.keys(_handles).forEach((actor_s) => {
-		let [actor, resize_e] = _handles[actor_s];
-		actor.disconnect(resize_e);
+	Object.keys(_handles).forEach((key) => {
+		let [obj, event_id] = _handles[key];
+		obj.disconnect(event_id);
 	});
-	global.screen.disconnect(_wsadd_event);
-	global.screen.disconnect(_wsdel_event);
 }
