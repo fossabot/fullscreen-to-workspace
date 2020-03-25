@@ -43,14 +43,18 @@ function handleResize(actor) {
 }
 
 function handleClose(workspace, win) {
-	if (win.window_type !== Meta.WindowType.NORMAL)
-		return;
-	let actor = global.get_window_actors().filter((act) => act.meta_window == win)[0];
-	if (!(actor in _handles))
-		return;
-	if (win.is_fullscreen())
-		unmaximize(win, workspace);
-	delete _handles[actor];
+	// idle in order for `win.get_workspace()` to return consistent result
+	Mainloop.idle_add(() => {
+		// ignore if not a main window or the window is actually changing ws
+		if (win.window_type !== Meta.WindowType.NORMAL || win.get_workspace() != null)
+			return;
+		let actor = global.get_window_actors().filter((act) => act.meta_window == win)[0];
+		if (!(actor in _handles))
+			return;
+		if (win.is_fullscreen())
+			unmaximize(win, workspace);
+		delete _handles[actor];
+	});
 }
 
 
