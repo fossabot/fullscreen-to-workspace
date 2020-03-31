@@ -25,6 +25,9 @@ function unmaximize(win, clean_ws) {
 	delete _previousWorkspace[win];
 	if (previous == undefined)
 		return;
+	// check if previous workspace still exists, otherwise use first one
+	if (previous.index() < 0)
+		previous = global.screen.get_workspace_by_index(0);
 	let old_ws = clean_ws || win.get_workspace();
 	if (!clean_ws)
 		win.change_workspace(previous, true, global.get_current_time());
