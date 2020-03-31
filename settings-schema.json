@@ -1,0 +1,8 @@
+{
+  "allow-current-workspace": {
+    "type": "checkbox",
+    "default": true,
+    "description": "Use current workspace when there are no other windows",
+    "tooltip": "Avoid moving a fullscreen window to a different workspace when there are no other windows in the current one. Setting this option to false resembles macOS-like behavior, but might mess up with dynamic workspaces."
+  }
+}

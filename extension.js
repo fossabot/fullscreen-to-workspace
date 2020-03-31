@@ -1,16 +1,17 @@
 const Meta = imports.gi.Meta;
-const Mainloop = imports.mainloop;
+const settings = imports.ui.settings;
+const mainloop = imports.mainloop;
 
 // pythonic
 const range = (n) => Array(n+1).join().split("").map((_,i) => i);
 
-let _handles, _previousWorkspace;
+let _handles, _previousWorkspace, _settings;
 
 function maximize(win) {
 	if (win.window_type !== Meta.WindowType.NORMAL)
 		return;
-	// If the current workspace doesn't have any other windows make it maximized here.
-	if (win.get_workspace().list_windows().filter(w => !w.is_on_all_workspaces()).length == 1)
+	// If the current workspace doesn't have any other windows make it maximized here (depending on option).
+	if (_settings.use_cur_ws && win.get_workspace().list_windows().filter(w => !w.is_on_all_workspaces()).length == 1)
 		return;
 	_previousWorkspace[win] = win.get_workspace();
 	let target_ws = global.screen.append_new_workspace(false, global.get_current_time());
@@ -47,7 +48,7 @@ function handleResize(actor) {
 
 function handleClose(workspace, win) {
 	// idle in order for `win.get_workspace()` to return consistent result
-	Mainloop.idle_add(() => {
+	mainloop.idle_add(() => {
 		// ignore if not a main window or the window is actually changing ws
 		if (win.window_type !== Meta.WindowType.NORMAL || win.get_workspace() != null)
 			return;
@@ -61,11 +62,17 @@ function handleClose(workspace, win) {
 }
 
 
+function SettingsHandler(uuid) {
+	this._settings = new settings.ExtensionSettings(this, uuid);
+	this._settings.bindProperty(settings.BindingDirection.IN, "allow-current-workspace", "use_cur_ws", () => undefined);
+}
+
 // Mandatory Functions //
 
 function init(extensionMeta) {
 	_handles = {};
 	_previousWorkspace = {};
+	_settings = new SettingsHandler(extensionMeta.uuid);
 }
 
 function enable() {
@@ -77,7 +84,7 @@ function enable() {
 			return;
 		// for some reason we need to idle, otherwise the window is not captured
 		// among the global actors yet
-		Mainloop.idle_add(() => {
+		mainloop.idle_add(() => {
 			let actor = global.get_window_actors().filter((act) => act.meta_window == win)[0];
 			if (actor in _handles)
 				return;
