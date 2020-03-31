@@ -13,9 +13,9 @@ function maximize(win) {
 	if (win.get_workspace().list_windows().filter(w => !w.is_on_all_workspaces()).length == 1)
 		return;
 	_previousWorkspace[win] = win.get_workspace();
-	let lastworkspace = Math.max(1, global.screen.n_workspaces);
-	win.change_workspace_by_index(lastworkspace, true, global.get_current_time());
-	global.screen.get_workspace_by_index(lastworkspace).activate(global.get_current_time());
+	let target_ws = global.screen.append_new_workspace(false, global.get_current_time());
+	win.change_workspace(target_ws);
+	target_ws.activate(global.get_current_time());
 }
 
 function unmaximize(win, clean_ws) {
@@ -30,7 +30,7 @@ function unmaximize(win, clean_ws) {
 		previous = global.screen.get_workspace_by_index(0);
 	let old_ws = clean_ws || win.get_workspace();
 	if (!clean_ws)
-		win.change_workspace(previous, true, global.get_current_time());
+		win.change_workspace(previous);
 	previous.activate(global.get_current_time());
 	// Don't leave empty created workspaces behind.
 	if (old_ws.list_windows().filter(w => !w.is_on_all_workspaces()).length == 0)
