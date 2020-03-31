@@ -19,6 +19,5 @@ rm master.zip
 
 ## Dev notes
 
-- This work is mainly based on reverse-engineering other Cinnamon extensions and Cinnamon's source code itself, as I didn't find any reasonable documentation for extensions.
-- In Cinnamon there's no `size-change` event on the `window_manager` object. For now I found `size-changed` event on window actors, but probably it's not the best solution.
-- The actual implementation seems to be unefficient and has some crashes, needs more testing and polishing.
+- In Cinnamon there's no `size-change` event on the `window_manager` object. For now I found `size-changed` event on window actors, but probably does not scale well.
+- I fixed common scenario bugs, but there might still be some edge cases that I didn't check yet. More testing is needed.
