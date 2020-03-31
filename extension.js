@@ -8,8 +8,6 @@ const range = (n) => Array(n+1).join().split("").map((_,i) => i);
 let _handles, _previousWorkspace, _settings;
 
 function maximize(win) {
-	if (win.window_type !== Meta.WindowType.NORMAL)
-		return;
 	// If the current workspace doesn't have any other windows make it maximized here (depending on option).
 	if (_settings.use_cur_ws && win.get_workspace().list_windows().filter(w => !w.is_on_all_workspaces()).length == 1)
 		return;
@@ -20,8 +18,6 @@ function maximize(win) {
 }
 
 function unmaximize(win, clean_ws) {
-	if (win.window_type !== Meta.WindowType.NORMAL)
-		return;
 	let previous = _previousWorkspace[win];
 	delete _previousWorkspace[win];
 	if (previous == undefined)
@@ -40,6 +36,8 @@ function unmaximize(win, clean_ws) {
 
 function handleResize(actor) {
 	let win = actor.meta_window;
+	if (win.window_type !== Meta.WindowType.NORMAL)
+		return;
 	if (win.is_fullscreen())
 		maximize(win);
 	else
