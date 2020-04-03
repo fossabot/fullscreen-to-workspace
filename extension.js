@@ -98,11 +98,13 @@ function enable() {
 		let remove_event = ws.connect("window-removed", handleClose);
 		_handles[ws] = [ws, remove_event];
 	})];
-	_handles[global.screen+"wsdel"] = [global.screen, global.screen.connect("workspace-removed", (_, wsi) => {
-		// what a cancer...
-		let k = Object.keys(_handles).filter((key) => _handles[key][0] instanceof Meta.Workspace).filter((key) => _handles[key][0].index == wsi)[0];
-		if (k != undefined)
-			delete _handles[k];
+	_handles[global.screen+"wsdel"] = [global.screen, global.screen.connect("workspace-removed", () => {
+		Object.keys(_handles)
+			.filter((key) => {
+				let obj = _handles[key][0];
+				return (obj instanceof Meta.Workspace) && (obj.index() < 0);
+			})
+			.forEach((key) => delete _handles[key]);
 	})];
 	// bind existing windows
 	global.get_window_actors().forEach((actor) => {
