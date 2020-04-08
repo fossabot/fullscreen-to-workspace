@@ -35,13 +35,15 @@ function unmaximize(win, clean_ws) {
 }
 
 function handleResize(actor) {
-	let win = actor.meta_window;
-	if (win.window_type !== Meta.WindowType.NORMAL)
-		return;
-	if (win.is_fullscreen())
-		maximize(win);
-	else
-		unmaximize(win);
+	mainloop.idle_add(() => {
+		let win = actor.meta_window;
+		if (!win || win.window_type !== Meta.WindowType.NORMAL)
+			return;
+		if (win.is_fullscreen())
+			maximize(win);
+		else
+			unmaximize(win);
+	});
 }
 
 function handleClose(workspace, win) {
