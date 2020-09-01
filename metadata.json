@@ -1,7 +1,8 @@
 {
     "uuid": "fullscreen-to-workspace@mttbernardini",
     "cinnamon-version": [
-        "3.2"
+        "3.2",
+        "3.8"
     ],
     "dangerous": false,
     "name": "Fullscreen On New Workspace",
